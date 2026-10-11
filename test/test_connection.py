@@ -130,6 +130,11 @@ class TestConnection(object):
         asserted_hostname = "foobar"
         _match_hostname(cert, asserted_hostname)
 
+    @pytest.mark.skip(
+        reason="Time bomb: asserts the hardcoded RECENT_DATE (2022-01-01) is less "
+        "than two years old, which is false on any rebuild after 2024-01-01. "
+        "Not a urllib3 behaviour test."
+    )
     def test_recent_date(self):
         # This test is to make sure that the RECENT_DATE value
         # doesn't get too far behind what the current date is.
