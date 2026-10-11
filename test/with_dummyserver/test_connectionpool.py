@@ -464,6 +464,26 @@ class TestConnectionPool(HTTPDummyServerTestCase):
             assert r.status == 200
             assert r.data == b"Dummy server!"
 
+    @mock.patch("urllib3.response.GzipDecoder.decompress")
+    def test_no_decoding_with_redirect_when_preload_disabled(self, gzip_decompress):
+        """
+        Test that urllib3 does not attempt to decode a gzipped redirect
+        response when `preload_content` is set to `False`.
+        """
+        with HTTPConnectionPool(self.host, self.port) as pool:
+            # Three requests are expected: two redirects and one final / 200 OK.
+            response = pool.request(
+                "GET",
+                "/redirect",
+                fields={"target": "/redirect?compressed=true", "compressed": "true"},
+                preload_content=False,
+            )
+        assert response.status == 200
+        # Draining the gzipped bodies of the two redirects must not run the
+        # gzip decoder at all, otherwise a decompression bomb served on a
+        # redirect would be expanded before the caller reads anything.
+        assert not gzip_decompress.called
+
     def test_303_redirect_makes_request_lose_body(self):
         with HTTPConnectionPool(self.host, self.port) as pool:
             response = pool.request(
